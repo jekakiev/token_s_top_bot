@@ -1,5 +1,0 @@
-{
-  "startWithYesterdaysData": true,
-  "yesterdaysDataFile": "data/yesterday.json",
-  "historyDir": "data/history"
-}
