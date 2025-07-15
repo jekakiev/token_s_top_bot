@@ -27,15 +27,19 @@ module.exports = (bot) => {
       return ctx.wizard.next();
     },
     async (ctx) => {
-      const message = ctx.message?.text;
+      console.log('Получено сообщение:', ctx.message);
+      const message = ctx.message?.text || ctx.message?.forward_from?.username === 'yosoyass_bot' && ctx.message?.text;
       if (!message) {
-        await ctx.reply('Пожалуйста, перешлите сообщение с /top.');
+        await ctx.reply('Пожалуйста, перешлите сообщение с /top от @yosoyass_bot.');
         return ctx.wizard.back();
       }
 
       const date = ctx.scene.state.date;
+      const historyDir = path.join(__dirname, '..', 'history');
+      await fs.ensureDir(historyDir); // Створюємо папку history, якщо її немає
+
       const fileName = `init_pure_${date}.json`;
-      const filePath = path.join(__dirname, '..', 'history', fileName);
+      const filePath = path.join(historyDir, fileName);
 
       // Збереження сирого повідомлення
       await fs.writeJson(filePath, { date, message }, { spaces: 2 });
@@ -52,9 +56,10 @@ module.exports = (bot) => {
           topList.push({ nick, sPoints });
         }
       }
+      console.log('Разобранный топ:', topList);
 
       // Оновлення історії поінтів (points.json)
-      const pointsPath = path.join(__dirname, '..', 'history', 'points.json');
+      const pointsPath = path.join(historyDir, 'points.json');
       let points = {};
       if (await fs.pathExists(pointsPath)) {
         points = await fs.readJson(pointsPath);
@@ -66,7 +71,7 @@ module.exports = (bot) => {
       await fs.writeJson(pointsPath, points, { spaces: 2 });
 
       // Оновлення історії токенів (tokens.json)
-      const tokensPath = path.join(__dirname, '..', 'history', 'tokens.json');
+      const tokensPath = path.join(historyDir, 'tokens.json');
       let tokens = {};
       if (await fs.pathExists(tokensPath)) {
         tokens = await fs.readJson(tokensPath);
@@ -76,9 +81,9 @@ module.exports = (bot) => {
         if (!tokens[nick]) tokens[nick] = [];
         tokens[nick].push({ date, tokens: tokensValue });
       }
-      await fs.writeJson(tokensPath, tokens, { spaces: 2 });
+      await fs.writeJson(tokensPath, tokens, { spaces: 2});
 
-      await ctx.reply(`История поинтов и токенов заполнена как начальные данные за ${date}`);
+      await ctx.reply(`История поинтов и токенов заполнена как начальные данные за ${date}. ✅ Успешно завершено!`);
       return ctx.scene.leave();
     }
   );
