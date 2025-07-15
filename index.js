@@ -119,7 +119,7 @@ bot.on('message', async (msg) => {
       return bot.sendMessage(chatId, '❌ Повідомлення виглядає порожнім або непридатним. Спробуй переслати ще раз.');
     }
 
-    try {
+        try {
       const dataToSave = {
         date: state.date,
         raw: rawText
@@ -134,9 +134,10 @@ bot.on('message', async (msg) => {
 
       bot.sendMessage(chatId, '📊 Дані оброблено: поінти збережено, токени розраховано.');
     } catch (err) {
-      console.error('❌ Помилка при обробці processInitial:', err);
-      bot.sendMessage(chatId, '❌ Помилка при обробці. Перевір логи.');
+      console.error('❌ Помилка при обробці processInitial:\n', err.stack || err);
+      bot.sendMessage(chatId, `❌ Помилка при обробці: ${err.message || 'невідома помилка'}`);
     }
+
 
     delete waitingFor[userId];
   }
