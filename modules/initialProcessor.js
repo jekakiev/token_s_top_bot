@@ -1,50 +1,55 @@
 const fs = require('fs');
 const path = require('path');
-const topParser = require('./topParser');
-const pointsHistory = require('./pointsHistoryManager');
-const tokensHistory = require('./tokensHistoryManager');
-const settings = require('../config/settings');
 
 function processInitial() {
+  console.log('🔧 processInitial() запущено...');
+
   try {
-    console.log('📥 Читаємо origin.json...');
     const originPath = path.join(__dirname, '../data/origin.json');
-    if (!fs.existsSync(originPath)) {
-      console.error('❌ Файл origin.json не знайдено');
-      return;
+    const historyPath = path.join(__dirname, '../data/history.json');
+    const balancePath = path.join(__dirname, '../data/balance.json');
+
+    const rawData = JSON.parse(fs.readFileSync(originPath, 'utf-8'));
+    const lines = rawData.raw.split('\n').map(line => line.trim()).filter(Boolean);
+    const date = rawData.date;
+
+    console.log('📅 Дата з origin:', date);
+    console.log('📄 Перших 3 рядки тексту:', lines.slice(0, 3));
+
+    const startIndex = lines.findIndex(line => line.includes('📉 S-points за 1К S:'));
+    if (startIndex === -1) throw new Error('Не знайдено початку списку з очками');
+
+    const topUsers = [];
+    for (let i = startIndex + 1; i < lines.length; i++) {
+      const line = lines[i];
+      const match = line.match(/^\d+\.\s(.+?)\sS-points:\s(\d+)/);
+      if (match) {
+        const name = match[1].trim();
+        const sPoints = parseInt(match[2].trim());
+        topUsers.push({ name, sPoints });
+      }
     }
 
-    const origin = JSON.parse(fs.readFileSync(originPath, 'utf-8'));
-    const { date, raw } = origin;
+    if (topUsers.length === 0) throw new Error('Жодного юзера не знайдено');
 
-    console.log('📤 Парсимо /top...');
-    const topUsers = topParser.parseTopMessage(raw);
+    const tokensPerPoint = 0.1;
+    const balance = {};
+    const history = {};
 
-    if (!topUsers || topUsers.length === 0) {
-      console.error('❌ Не вдалося розпарсити дані з origin.json');
-      return;
+    for (const user of topUsers) {
+      const tokens = +(user.sPoints * tokensPerPoint).toFixed(3);
+      balance[user.name] = [{ date, tokens }];
+      history[user.name] = [{ date, sPoints: user.sPoints }];
     }
 
-    console.log('💾 Зберігаємо поінти...');
-    topUsers.forEach(user => {
-      pointsHistory.addDailyPoints([{ nickname: user.nickname, sPoints: user.sPoints }]);
-    });
+    fs.writeFileSync(historyPath, JSON.stringify(history, null, 2));
+    fs.writeFileSync(balancePath, JSON.stringify(balance, null, 2));
 
-    console.log('💰 Розрахунок токенів...');
-    const tokenHolders = topUsers.map(user => {
-      const tokens = +(user.sPoints * settings.S_POINT_TO_TOKEN_RATIO);
-      return { nickname: user.nickname, tokens };
-    });
-
-    console.log('💰 Зберігаємо токени...');
-    tokensHistory.addDailyBalances(tokenHolders);
-
-    console.log('✅ Початкові дані з origin.json оброблено і збережено.');
+    console.log('✅ Дані збережено в history.json і balance.json');
   } catch (err) {
-    console.error('❌ Помилка при обробці даних:', err);
+    console.error('❌ ПОМИЛКА В processInitial:', err);
+    throw err; // кидаємо далі, щоб побачити в бота
   }
 }
 
-module.exports = {
-  processInitial
-};
+module.exports = { processInitial };
