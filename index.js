@@ -19,10 +19,17 @@ bot.onText(/\/clear/, (msg) => {
     return bot.sendMessage(msg.chat.id, '⛔️ У вас немає прав для цієї дії.');
   }
 
-  fs.writeFileSync(path.join(__dirname, 'data', 'history.json'), '{}');
-  fs.writeFileSync(path.join(__dirname, 'data', 'balance.json'), '{}');
+      const originPath = path.join(__dirname, 'data', 'origin.json');
+    fs.writeFileSync(originPath, JSON.stringify(dataToSave, null, 2));
 
-  bot.sendMessage(msg.chat.id, '✅ Всі історії очищені успішно.');
+    // 🔥 одразу запускаємо обробку
+    const { processInitial } = require('./modules/initialProcessor');
+    processInitial();
+
+    delete waitingFor[userId];
+
+    return bot.sendMessage(chatId, '✅ Початкові дані збережено та оброблено');
+
 });
 
 // ✅ /initial (введення початкової дати та повідомлення)
