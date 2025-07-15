@@ -1,22 +1,22 @@
-# fly.toml app configuration file generated for token-s-top-bot on 2025-07-15T17:17:09+03:00
-#
-# See https://fly.io/docs/reference/configuration/ for information about how to use this file.
-#
+app = "token-s-top-bot"
+kill_signal = "SIGINT"
+kill_timeout = 5
+processes = []
 
-app = 'token-s-top-bot'
-primary_region = 'arn'
+[env]
+  PORT = "8080"
 
-[build]
+[[services]]
+  http_checks = []
+  internal_port = 8080
+  processes = ["app"]
+  protocol = "tcp"
+  script_checks = []
 
-[http_service]
-  internal_port = 3000
-  force_https = true
-  auto_stop_machines = 'stop'
-  auto_start_machines = true
-  min_machines_running = 0
-  processes = ['app']
+  [[services.ports]]
+    handlers = ["http"]
+    port = 80
 
-[[vm]]
-  memory = '1gb'
-  cpu_kind = 'shared'
-  cpus = 1
+  [[services.ports]]
+    handlers = ["tls", "http"]
+    port = 443
