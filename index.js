@@ -123,10 +123,13 @@ bot.on('message', (msg) => {
 
     fs.writeFileSync(path.join(__dirname, 'data', 'origin.json'), JSON.stringify(dataToSave, null, 2));
 
-    const { processInitial } = require('./modules/initialProcessor');
+        const { processInitial } = require('./modules/initialProcessor');
     processInitial();
 
     delete waitingFor[userId];
-    return bot.sendMessage(chatId, '✅ Початкові дані збережено та оброблено');
+
+    bot.sendMessage(chatId, '✅ Початкові дані збережено в origin.json');
+    bot.sendMessage(chatId, '📊 Дані оброблено: поінти збережено, токени розраховано.');
+
   }
 });
