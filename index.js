@@ -38,7 +38,7 @@ bot.onText(/\/initial/, (msg) => {
   bot.sendMessage(chatId, '🗓 Введи дату у форматі YYYY-MM-DD (наприклад: 2025-07-14)');
 });
 
-// ✅ Обробка будь-яких повідомлень (друга частина для /initial)
+// ✅ Обробка повідомлень для /initial
 bot.on('message', (msg) => {
   const userId = msg.from.id;
   const chatId = msg.chat.id;
@@ -69,10 +69,49 @@ bot.on('message', (msg) => {
       raw: rawText
     };
 
-    fs.writeFileSync(path.join(__dirname, 'data', 'origin.json'), JSON.stringify(dataToSave, null, 2));
+    const originPath = path.join(__dirname, 'data', 'origin.json');
+    fs.writeFileSync(originPath, JSON.stringify(dataToSave, null, 2));
+
+    // 🔥 одразу запускаємо обробку
+    const { processInitial } = require('./modules/initialProcessor');
+    processInitial();
 
     delete waitingFor[userId];
 
-    return bot.sendMessage(chatId, '✅ Початкові дані збережено в `origin.json`');
+    return bot.sendMessage(chatId, '✅ Початкові дані збережено та оброблено');
   }
+});
+
+// ✅ /show_points — показати історію поінтів
+bot.onText(/\/show_points/, (msg) => {
+  if (msg.from.id !== settings.ADMIN_ID) return;
+
+  const historyPath = path.join(__dirname, 'data', 'history.json');
+  if (!fs.existsSync(historyPath)) {
+    return bot.sendMessage(msg.chat.id, '⚠️ Файл history.json не знайдено.');
+  }
+
+  const data = JSON.parse(fs.readFileSync(historyPath, 'utf-8'));
+  const text = '📘 Points history:\n\n' + Object.entries(data).map(([nick, records]) => {
+    return `👤 ${nick}:\n` + records.map(r => `📅 ${r.date}: ${r.sPoints}`).join('\n');
+  }).join('\n\n');
+
+  bot.sendMessage(msg.chat.id, text.length > 4096 ? text.slice(0, 4096) + '\n... (обрізано)' : text);
+});
+
+// ✅ /show_tokens — показати історію токенів
+bot.onText(/\/show_tokens/, (msg) => {
+  if (msg.from.id !== settings.ADMIN_ID) return;
+
+  const balancePath = path.join(__dirname, 'data', 'balance.json');
+  if (!fs.existsSync(balancePath)) {
+    return bot.sendMessage(msg.chat.id, '⚠️ Файл balance.json не знайдено.');
+  }
+
+  const data = JSON.parse(fs.readFileSync(balancePath, 'utf-8'));
+  const text = '💰 Token balances:\n\n' + Object.entries(data).map(([nick, records]) => {
+    return `👤 ${nick}:\n` + records.map(r => `📅 ${r.date}: ${r.tokens}`).join('\n');
+  }).join('\n\n');
+
+  bot.sendMessage(msg.chat.id, text.length > 4096 ? text.slice(0, 4096) + '\n... (обрізано)' : text);
 });
