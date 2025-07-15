@@ -10,26 +10,26 @@ module.exports = (bot) => {
     }
 
     await ctx.reply('Введите дату в формате YYYY-MM-DD (например, 2025-07-14):');
-    bot.hear(/^\d{4}-\d{2}-\d{2}$/, async (ctx) => {
-      const date = ctx.message.text;
+    bot.once('text', async (dateCtx) => {
+      const date = dateCtx.message.text;
       if (!dayjs(date, 'YYYY-MM-DD', true).isValid()) {
-        return ctx.reply('Неверный формат даты. Используйте YYYY-MM-DD.');
+        return dateCtx.reply('Неверный формат даты. Используйте YYYY-MM-DD.');
       }
 
       ctx.session = ctx.session || {};
       ctx.session.initialDate = date;
-      await ctx.reply('Перешлите сообщение с командой /top от @yosoyass_bot:');
-      
-      bot.on('text', async (ctx) => {
+      await dateCtx.reply('Перешлите сообщение с командой /top от @yosoyass_bot:');
+
+      bot.once('text', async (msgCtx) => {
         if (!ctx.session?.initialDate) return;
-        const message = ctx.message.text;
+        const message = msgCtx.message.text;
         const date = ctx.session.initialDate;
         const fileName = `init_pure_${date}.json`;
         const filePath = path.join(__dirname, '..', 'history', fileName);
 
         // Збереження сирого повідомлення
         await fs.writeJson(filePath, { date, message }, { spaces: 2 });
-        await ctx.reply(`Данные сохранены в ${fileName}`);
+        await msgCtx.reply(`Данные сохранены в ${fileName}`);
 
         // Парсинг повідомлення
         const regex = /\d+\.\s+(.+?)\s+S-points:\s*([\d\s]+)/g;
@@ -61,35 +61,14 @@ module.exports = (bot) => {
         if (await fs.pathExists(tokensPath)) {
           tokens = await fs.readJson(tokensPath);
         }
-
         for (const { nick, sPoints } of topList) {
-          if (!points[nick] || points[nick].length < 2) {
-            // Якщо менше 2 записів, припускаємо, що це перший запис
-            const tokensValue = (sPoints / 0.1) * 1000; // 0.1 S-point за 1K S
-            if (!tokens[nick]) tokens[nick] = [];
-            tokens[nick].push({ date, tokens: tokensValue });
-            continue;
-          }
-
-          // Обчислення приросту поінтів
-          const prevPoints = points[nick][points[nick].length - 2].sPoints;
-          const delta = sPoints - prevPoints;
-
-          // Перевірка на аномалію (аномалія: приріст більше, ніж зазвичай, наприклад, > 10% від попереднього)
-          const expectedDelta = prevPoints * 0.1; // Припустимо, що нормальний приріст до 10%
-          if (delta > expectedDelta) {
-            await ctx.reply(`⚠️ Аномалия для ${nick}: прирост ${delta} S-points (ожидается до ${expectedDelta.toFixed(2)}). Данные токенов не обновлены.`);
-            continue;
-          }
-
-          // Розрахунок токенів (0.1 S-point за 1K S)
-          const tokensValue = delta >= 0 ? (delta / 0.1) * 1000 : 0;
+          const tokensValue = (sPoints / 0.1) * 1000; // 0.1 S-point за 1K S
           if (!tokens[nick]) tokens[nick] = [];
           tokens[nick].push({ date, tokens: tokensValue });
         }
 
         await fs.writeJson(tokensPath, tokens, { spaces: 2 });
-        await ctx.reply(`История поинтов и токенов обновлена за ${date}`);
+        await msgCtx.reply(`История поинтов и токенов заполнена как начальные данные за ${date}`);
         delete ctx.session.initialDate;
       });
     });
