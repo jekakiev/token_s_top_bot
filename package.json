@@ -1,0 +1,24 @@
+{
+  "name": "token_s_top_bot",
+  "version": "1.0.0",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/jekakiev/token_s_top_bot.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/jekakiev/token_s_top_bot/issues"
+  },
+  "homepage": "https://github.com/jekakiev/token_s_top_bot#readme",
+  "description": "",
+  "dependencies": {
+    "dotenv": "^17.2.0",
+    "node-telegram-bot-api": "^0.66.0"
+  }
+}
