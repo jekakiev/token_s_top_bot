@@ -70,20 +70,7 @@ module.exports = (bot) => {
       }
       await fs.writeJson(pointsPath, points, { spaces: 2 });
 
-      // Оновлення історії токенів (tokens.json)
-      const tokensPath = path.join(historyDir, 'tokens.json');
-      let tokens = {};
-      if (await fs.pathExists(tokensPath)) {
-        tokens = await fs.readJson(tokensPath);
-      }
-      for (const { nick, sPoints } of topList) {
-        const tokensValue = (sPoints / 0.1) * 1000; // 0.1 S-point за 1K S
-        if (!tokens[nick]) tokens[nick] = [];
-        tokens[nick].push({ date, tokens: tokensValue });
-      }
-      await fs.writeJson(tokensPath, tokens, { spaces: 2});
-
-      await ctx.reply(`История поинтов и токенов заполнена как начальные данные за ${date}. ✅ Успешно завершено!`);
+      await ctx.reply(`История поинтов заполнена как начальные данные за ${date}. ✅ Успешно завершено!`);
       return ctx.scene.leave();
     }
   );
