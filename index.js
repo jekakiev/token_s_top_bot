@@ -4,7 +4,6 @@ const path = require('path');
 const settings = require('./config/settings');
 
 const bot = new TelegramBot(process.env.TOKEN, { polling: true });
-
 let waitingFor = {}; // тимчасовий стан очікування
 
 // ✅ /start
@@ -28,62 +27,34 @@ bot.onText(/\/clear/, (msg) => {
   bot.sendMessage(msg.chat.id, '✅ Всі історії та початкові дані успішно очищені.');
 });
 
-// ✅ /initial (введення початкової дати та повідомлення)
+// ✅ /initial (введення дати і топу)
 bot.onText(/\/initial/, (msg) => {
   if (msg.from.id !== settings.ADMIN_ID) return;
 
   const chatId = msg.chat.id;
   waitingFor[msg.from.id] = { step: 'awaiting_date' };
-
   bot.sendMessage(chatId, '🗓 Введи дату у форматі YYYY-MM-DD (наприклад: 2025-07-14)');
 });
 
-// ✅ Обробка повідомлень для /initial
-bot.on('message', (msg) => {
-  const userId = msg.from.id;
-  const chatId = msg.chat.id;
+// ✅ /help
+bot.onText(/\/help/, (msg) => {
+  if (msg.from.id !== settings.ADMIN_ID) return;
 
-  if (!waitingFor[userId]) return;
+  const helpText = `
+📖 Доступні команди:
 
-  const state = waitingFor[userId];
+/start — запустити бота
+/initial — внести початкову дату + повідомлення з /top
+/clear — очистити всі історії і початкові дані
+/show_points — подивитись історію поінтів
+/show_tokens — подивитись історію токенів
+/help — показати цю довідку
+  `.trim();
 
-  if (state.step === 'awaiting_date') {
-    const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
-    if (!dateRegex.test(msg.text)) {
-      return bot.sendMessage(chatId, '❌ Невірний формат дати. Спробуй ще раз: YYYY-MM-DD');
-    }
-
-    waitingFor[userId] = { step: 'awaiting_message', date: msg.text };
-    return bot.sendMessage(chatId, '📨 Тепер перешли повідомлення з /top (від бота @yosoyass_bot)');
-  }
-
-  if (state.step === 'awaiting_message') {
-       const rawText = msg.text || msg.caption || '';
-
-    if (!rawText || !rawText.includes('S-points')) {
-      return bot.sendMessage(chatId, '❌ Повідомлення не містить текст з "S-points". Спробуй ще раз. Можливо, переслане як медіа.');
-    }
-
-
-    const dataToSave = {
-      date: state.date,
-      raw: rawText
-    };
-
-    const originPath = path.join(__dirname, 'data', 'origin.json');
-    fs.writeFileSync(originPath, JSON.stringify(dataToSave, null, 2));
-
-    // 🔥 одразу запускаємо обробку
-    const { processInitial } = require('./modules/initialProcessor');
-    processInitial();
-
-    delete waitingFor[userId];
-
-    return bot.sendMessage(chatId, '✅ Початкові дані збережено та оброблено');
-  }
+  bot.sendMessage(msg.chat.id, helpText);
 });
 
-// ✅ /show_points — показати історію поінтів
+// ✅ /show_points
 bot.onText(/\/show_points/, (msg) => {
   if (msg.from.id !== settings.ADMIN_ID) return;
 
@@ -100,7 +71,7 @@ bot.onText(/\/show_points/, (msg) => {
   bot.sendMessage(msg.chat.id, text.length > 4096 ? text.slice(0, 4096) + '\n... (обрізано)' : text);
 });
 
-// ✅ /show_tokens — показати історію токенів
+// ✅ /show_tokens
 bot.onText(/\/show_tokens/, (msg) => {
   if (msg.from.id !== settings.ADMIN_ID) return;
 
@@ -117,22 +88,45 @@ bot.onText(/\/show_tokens/, (msg) => {
   bot.sendMessage(msg.chat.id, text.length > 4096 ? text.slice(0, 4096) + '\n... (обрізано)' : text);
 });
 
-// ✅ /help — показує всі доступні команди
-bot.onText(/\/help/, (msg) => {
-  if (msg.from.id !== settings.ADMIN_ID) return;
+// ✅ Обробка будь-якого повідомлення (після /initial)
+bot.on('message', (msg) => {
+  const userId = msg.from.id;
+  const chatId = msg.chat.id;
 
-  const helpText = `
-📖 Доступні команди:
+  if (!waitingFor[userId]) return;
 
-/start — запустити бота
-/initial — внести початкову дату + повідомлення з /top
-/clear — очистити всі історії і початкові дані
+  const state = waitingFor[userId];
 
-/show_points — подивитись історію поінтів
-/show_tokens — подивитись історію токенів
+  // Очікуємо дату
+  if (state.step === 'awaiting_date') {
+    const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
+    if (!dateRegex.test(msg.text)) {
+      return bot.sendMessage(chatId, '❌ Невірний формат дати. Спробуй ще раз: YYYY-MM-DD');
+    }
 
-/help — показати цю довідку
-  `.trim();
+    waitingFor[userId] = { step: 'awaiting_message', date: msg.text };
+    return bot.sendMessage(chatId, '📨 Тепер перешли повідомлення з /top (від бота @yosoyass_bot)');
+  }
 
-  bot.sendMessage(msg.chat.id, helpText);
+  // Очікуємо переслане повідомлення
+  if (state.step === 'awaiting_message') {
+    const rawText = msg.text || msg.caption || '';
+
+    if (!rawText || rawText.length < 20) {
+      return bot.sendMessage(chatId, '❌ Повідомлення виглядає порожнім або непридатним. Спробуй переслати ще раз.');
+    }
+
+    const dataToSave = {
+      date: state.date,
+      raw: rawText
+    };
+
+    fs.writeFileSync(path.join(__dirname, 'data', 'origin.json'), JSON.stringify(dataToSave, null, 2));
+
+    const { processInitial } = require('./modules/initialProcessor');
+    processInitial();
+
+    delete waitingFor[userId];
+    return bot.sendMessage(chatId, '✅ Початкові дані збережено та оброблено');
+  }
 });
