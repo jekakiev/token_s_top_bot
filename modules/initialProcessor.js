@@ -51,16 +51,25 @@ function updateHistory(date, topList) {
 function updateBalance(date, topList) {
   const historyPath = path.join(__dirname, '../data/history.json');
   const balancePath = path.join(__dirname, '../data/balance.json');
-  const history = JSON.parse(fs.readFileSync(historyPath, 'utf-8'));
-  let balance = {};
 
+  let history = {};
+  if (fs.existsSync(historyPath)) {
+    history = JSON.parse(fs.readFileSync(historyPath, 'utf-8'));
+  }
+
+  let balance = {};
   if (fs.existsSync(balancePath)) {
     balance = JSON.parse(fs.readFileSync(balancePath, 'utf-8'));
   }
 
   for (const { nick, sPoints } of topList) {
-    const records = history[nick] || [];
-    const prev = records.length >= 2 ? records[records.length - 2].sPoints : 0;
+    const records = history[nick];
+    if (!records || records.length < 2) {
+      console.log(`⚠️ Пропущено ${nick}: недостатньо історії (менше 2 записів).`);
+      continue;
+    }
+
+    const prev = records[records.length - 2].sPoints;
     const delta = sPoints - prev;
 
     const tokens = delta >= 0 ? Math.round((delta * 10) / 1000 * 100) / 100 : 0;
@@ -78,15 +87,22 @@ function updateBalance(date, topList) {
  * @param {string} rawText
  */
 async function processInitial(date, rawText) {
-  console.log('🟡 Початок обробки...');
-  const topList = parseTop(rawText);
+  try {
+    console.log('🟡 Початок обробки...');
+    const topList = parseTop(rawText);
+    console.log('📋 Розпарсено топ:', topList);
 
-  console.log('📋 Розпарсено топ:', topList);
-  updateHistory(date, topList);
-  console.log('📘 Історія оновлена');
-  updateBalance(date, topList);
-  console.log('💰 Баланси оновлені');
-  console.log('✅ Успішно завершено обробку.');
+    updateHistory(date, topList);
+    console.log('📘 Історія оновлена');
+
+    updateBalance(date, topList);
+    console.log('💰 Баланси оновлені');
+
+    console.log('✅ Успішно завершено обробку.');
+  } catch (err) {
+    console.error('❌ Помилка в processInitial:', err.message);
+    throw err;
+  }
 }
 
 module.exports = {
