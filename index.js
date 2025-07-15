@@ -7,8 +7,13 @@ const bot = new TelegramBot(process.env.TOKEN, { polling: true });
 let waitingFor = {}; // тимчасовий стан очікування
 
 // ✅ /start
-bot.onText(/\/start/, (msg) => {
-  bot.sendMessage(msg.chat.id, '👋 Бот запущен. Дані зчитуються...');
+bot.on('message', async (msg) => {
+  console.log('📩 Отримано повідомлення з текстом:', msg.text);
+  console.log('➡️ Повне повідомлення:', msg);
+
+  if (msg.text === '/start') {
+    bot.sendMessage(msg.chat.id, '👋 Бот запущен. Дані зчитуються...');
+  }
 });
 
 // ✅ /clear (тільки адмін)
@@ -88,7 +93,7 @@ bot.onText(/\/show_tokens/, (msg) => {
 });
 
 // ✅ обробка повідомлення (включаючи переслане з /top)
-bot.on('message', (msg) => {
+bot.on('message', async (msg) => {
   const userId = msg.from.id;
   const chatId = msg.chat.id;
 
@@ -123,8 +128,9 @@ bot.on('message', (msg) => {
       fs.writeFileSync(path.join(__dirname, 'data', 'origin.json'), JSON.stringify(dataToSave, null, 2));
       bot.sendMessage(chatId, '✅ Початкові дані збережено в origin.json');
 
+      console.log('📦 Викликається processInitial з датою:', state.date);
       const { processInitial } = require('./modules/initialProcessor');
-      processInitial();
+      await processInitial(state.date, rawText);
 
       bot.sendMessage(chatId, '📊 Дані оброблено: поінти збережено, токени розраховано.');
     } catch (err) {
