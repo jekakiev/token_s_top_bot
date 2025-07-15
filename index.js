@@ -1,61 +1,63 @@
 const TelegramBot = require('node-telegram-bot-api');
 const fs = require('fs');
 const path = require('path');
-const config = require('./config.json');
+const settings = require('./settings.json');
+const { generateDailyReport } = require('./dailyProcessor');
 const topParser = require('./topParser');
 require('dotenv').config();
 
-const token = process.env.BOT_TOKEN;
-const bot = new TelegramBot(token, { polling: true });
+const bot = new TelegramBot(process.env.BOT_TOKEN, { polling: true });
 
-// ============= Очищення історії та обробка вчорашніх даних =============
+let yesterdayData = null;
+let todayData = null;
 
-if (config.startWithYesterdaysData) {
-    // 1. Очищення історії
-    const historyDir = path.join(__dirname, config.historyDir);
-    if (fs.existsSync(historyDir)) {
-        fs.readdirSync(historyDir).forEach(file => {
-            fs.unlinkSync(path.join(historyDir, file));
+// ====== Очистка истории при запуске ======
+if (settings.mode === 'manual') {
+    const historyPath = path.join(__dirname, 'data/history');
+    if (fs.existsSync(historyPath)) {
+        fs.readdirSync(historyPath).forEach(file => {
+            fs.unlinkSync(path.join(historyPath, file));
         });
     }
-    // 2. Обробка вчорашніх даних
-    const yesterdayPath = path.join(__dirname, config.yesterdaysDataFile);
-    if (fs.existsSync(yesterdayPath)) {
-        const yesterdaysData = fs.readFileSync(yesterdayPath, 'utf-8');
-        const testChatId = process.env.TEST_CHAT_ID || 'YOUR_TEST_CHAT_ID';
-        try {
-            bot.sendMessage(testChatId, `Тест вчорашніх даних:\n${yesterdaysData}`);
-        } catch (e) {
-            console.log('Помилка надсилання вчорашніх даних:', e.message);
-        }
-    }
 }
 
-// ============= Основна логіка бота =============
+// ====== Запросить вчерашние данные ======
+const adminId = settings.admin_ids[0];
+bot.sendMessage(adminId, 'Пожалуйста, отправьте вчерашний пост от @token_s_top для анализа.');
 
-bot.onText(/\/start/, (msg) => {
-    bot.sendMessage(msg.chat.id, "Бот запущено. Чекаю дані...");
+// ====== Обработка входящего сообщения от админа ======
+bot.on('message', async (msg) => {
+    if (msg.chat.id !== adminId || !msg.text || yesterdayData) return;
+
+    try {
+        yesterdayData = topParser.parse(msg.text);
+        bot.sendMessage(adminId, '✅ Вчерашние данные получены. Получаю сегодняшние...');
+        await fetchTodayAndCompare();
+    } catch (err) {
+        bot.sendMessage(adminId, '❌ Не удалось обработать сообщение. Убедитесь, что это правильный пост с топом.');
+    }
 });
 
-// ============= Основний цикл: парсинг сьогоднішніх даних =============
-
-async function mainLoop() {
+// ====== Отправка /top в бот и сравнение ======
+async function fetchTodayAndCompare() {
     try {
-        // отримання даних (заміни функцію на свою, якщо потрібно)
-        const todayData = await topParser.getTodayData();
+        const sourceBotUsername = settings.telegram.source_bot_username;
+        const topMessage = await bot.sendMessage(sourceBotUsername, '/top');
 
-        // Зберігаємо відповідь як "вчорашню" (для наступного старту)
-        const yesterdaysPath = path.join(__dirname, config.yesterdaysDataFile);
-        fs.writeFileSync(yesterdaysPath, JSON.stringify(todayData), 'utf-8');
+        // Ждём ответа от источника
+        bot.once('message', (msg) => {
+            if (!msg.text.includes('S-points')) return;
 
-        // Відправка у основний чат (замінити на потрібний ID)
-        const mainChatId = process.env.MAIN_CHAT_ID || 'YOUR_MAIN_CHAT_ID';
-        bot.sendMessage(mainChatId, `Сьогоднішні TOP дані:\n${JSON.stringify(todayData, null, 2)}`);
-    } catch (error) {
-        console.error('mainLoop error:', error);
+            try {
+                todayData = topParser.parse(msg.text);
+                const report = generateDailyReport(yesterdayData, todayData);
+                bot.sendMessage(settings.telegram.channel_id, report);
+                bot.sendMessage(adminId, '✅ Ежедневный отчёт успешно отправлен в канал.');
+            } catch (e) {
+                bot.sendMessage(adminId, '❌ Ошибка при парсинге сегодняшних данных.');
+            }
+        });
+    } catch (err) {
+        bot.sendMessage(adminId, '❌ Не удалось отправить /top в исходный бот.');
     }
 }
-
-// ============= Запуск циклу (можна викликати за розкладом або вручну) =============
-
-mainLoop();
