@@ -4,6 +4,7 @@ const path = require('path');
 const settings = require('./settings.json');
 const { generateDailyReport } = require('./dailyProcessor');
 const topParser = require('./topParser');
+const { saveHistory, saveAnomalies } = require('./historyManager');
 require('dotenv').config();
 
 const bot = new TelegramBot(process.env.BOT_TOKEN, { polling: true });
@@ -42,21 +43,37 @@ bot.on('message', async (msg) => {
 async function fetchTodayAndCompare() {
     try {
         const sourceBotUsername = settings.telegram.source_bot_username;
-        const topMessage = await bot.sendMessage(sourceBotUsername, '/top');
+        await bot.sendMessage(sourceBotUsername, '/top');
 
-        // Ждём ответа от источника
+        // Ждём ответ с топом
         bot.once('message', (msg) => {
             if (!msg.text.includes('S-points')) return;
 
             try {
                 todayData = topParser.parse(msg.text);
                 const report = generateDailyReport(yesterdayData, todayData);
+
+                // 📬 Отправка финального отчета в канал
                 bot.sendMessage(settings.telegram.channel_id, report);
                 bot.sendMessage(adminId, '✅ Ежедневный отчёт успешно отправлен в канал.');
+
+                // 💾 Сохранение истории
+                saveHistory(todayData);
+
+                // ⚠ Проверка и сохранение аномалий
+                const anomalies = saveAnomalies(yesterdayData, todayData);
+                if (anomalies && settings.anomalies.notify) {
+                    const message = `⚠ Обнаружены аномалии:\n` + anomalies.map(a =>
+                        `— ${a.nickname}: прирост +${a.diff}`
+                    ).join('\n');
+                    bot.sendMessage(adminId, message);
+                }
+
             } catch (e) {
                 bot.sendMessage(adminId, '❌ Ошибка при парсинге сегодняшних данных.');
             }
         });
+
     } catch (err) {
         bot.sendMessage(adminId, '❌ Не удалось отправить /top в исходный бот.');
     }
