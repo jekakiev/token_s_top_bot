@@ -1,37 +1,61 @@
-require('dotenv').config();
 const TelegramBot = require('node-telegram-bot-api');
-const { parseTopList, parseUserPoints } = require('./modules/topParser');
-const { saveDayTop, getHistory } = require('./modules/history');
+const fs = require('fs');
+const path = require('path');
+const config = require('./config.json');
+const topParser = require('./topParser');
+require('dotenv').config();
 
-const BOT_TOKEN = process.env.BOT_TOKEN;
-const CHANNEL_ID = process.env.CHANNEL_ID;
+const token = process.env.BOT_TOKEN;
+const bot = new TelegramBot(token, { polling: true });
 
-const bot = new TelegramBot(BOT_TOKEN, { polling: true });
+// ============= Очищення історії та обробка вчорашніх даних =============
 
-// Команда для перевірки роботи
-bot.onText(/\/start/, (msg) => {
-    bot.sendMessage(msg.chat.id, '✅ Бот працює!');
-});
-
-// Основна команда для збереження топу
-bot.onText(/\/save_top/, async (msg) => {
-    bot.sendMessage(msg.chat.id, 'Відправ текст топу (скопійований з бота):');
-    bot.once('message', (topMsg) => {
-        if (!topMsg.text || !topMsg.text.includes('S-points фарминг')) {
-            bot.sendMessage(topMsg.chat.id, '❌ Немає S-points фармінг у тексті!');
-            return;
+if (config.startWithYesterdaysData) {
+    // 1. Очищення історії
+    const historyDir = path.join(__dirname, config.historyDir);
+    if (fs.existsSync(historyDir)) {
+        fs.readdirSync(historyDir).forEach(file => {
+            fs.unlinkSync(path.join(historyDir, file));
+        });
+    }
+    // 2. Обробка вчорашніх даних
+    const yesterdayPath = path.join(__dirname, config.yesterdaysDataFile);
+    if (fs.existsSync(yesterdayPath)) {
+        const yesterdaysData = fs.readFileSync(yesterdayPath, 'utf-8');
+        const testChatId = process.env.TEST_CHAT_ID || 'YOUR_TEST_CHAT_ID';
+        try {
+            bot.sendMessage(testChatId, `Тест вчорашніх даних:\n${yesterdaysData}`);
+        } catch (e) {
+            console.log('Помилка надсилання вчорашніх даних:', e.message);
         }
-        const date = (new Date()).toISOString().slice(0, 10); // yyyy-mm-dd
-        const topLines = parseTopList(topMsg.text);
-        const parsed = topLines.map(parseUserPoints).filter(Boolean);
+    }
+}
 
-        saveDayTop(date, parsed);
+// ============= Основна логіка бота =============
 
-        // Формуємо quote block
-        const quoteBlock = '```\n' + topLines.join('\n') + '\n```';
-        bot.sendMessage(CHANNEL_ID, `Топ холдерів за ${date}:\n${quoteBlock}`, { parse_mode: 'Markdown' });
-        bot.sendMessage(topMsg.chat.id, '✅ Збережено!');
-    });
+bot.onText(/\/start/, (msg) => {
+    bot.sendMessage(msg.chat.id, "Бот запущено. Чекаю дані...");
 });
 
-console.log('S-points bot is running...');
+// ============= Основний цикл: парсинг сьогоднішніх даних =============
+
+async function mainLoop() {
+    try {
+        // отримання даних (заміни функцію на свою, якщо потрібно)
+        const todayData = await topParser.getTodayData();
+
+        // Зберігаємо відповідь як "вчорашню" (для наступного старту)
+        const yesterdaysPath = path.join(__dirname, config.yesterdaysDataFile);
+        fs.writeFileSync(yesterdaysPath, JSON.stringify(todayData), 'utf-8');
+
+        // Відправка у основний чат (замінити на потрібний ID)
+        const mainChatId = process.env.MAIN_CHAT_ID || 'YOUR_MAIN_CHAT_ID';
+        bot.sendMessage(mainChatId, `Сьогоднішні TOP дані:\n${JSON.stringify(todayData, null, 2)}`);
+    } catch (error) {
+        console.error('mainLoop error:', error);
+    }
+}
+
+// ============= Запуск циклу (можна викликати за розкладом або вручну) =============
+
+mainLoop();
