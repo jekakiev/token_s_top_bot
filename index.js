@@ -58,11 +58,12 @@ bot.on('message', (msg) => {
   }
 
   if (state.step === 'awaiting_message') {
-    const rawText = msg.text;
+       const rawText = msg.text || msg.caption || '';
 
     if (!rawText || !rawText.includes('S-points')) {
-      return bot.sendMessage(chatId, '❌ Повідомлення не схоже на відповідь команди /top. Спробуй ще раз.');
+      return bot.sendMessage(chatId, '❌ Повідомлення не містить текст з "S-points". Спробуй ще раз. Можливо, переслане як медіа.');
     }
+
 
     const dataToSave = {
       date: state.date,
