@@ -13,8 +13,7 @@ bot.onText(/\/start/, (msg) => {
 
 // ✅ /clear (тільки адмін)
 bot.onText(/\/clear/, (msg) => {
-  const userId = msg.from.id;
-  if (userId !== settings.ADMIN_ID) {
+  if (msg.from.id !== settings.ADMIN_ID) {
     return bot.sendMessage(msg.chat.id, '⛔️ У вас немає прав для цієї дії.');
   }
 
@@ -27,7 +26,7 @@ bot.onText(/\/clear/, (msg) => {
   bot.sendMessage(msg.chat.id, '✅ Всі історії та початкові дані успішно очищені.');
 });
 
-// ✅ /initial (введення дати і топу)
+// ✅ /initial
 bot.onText(/\/initial/, (msg) => {
   if (msg.from.id !== settings.ADMIN_ID) return;
 
@@ -88,7 +87,7 @@ bot.onText(/\/show_tokens/, (msg) => {
   bot.sendMessage(msg.chat.id, text.length > 4096 ? text.slice(0, 4096) + '\n... (обрізано)' : text);
 });
 
-// ✅ Обробка будь-якого повідомлення (після /initial)
+// ✅ обробка повідомлення (включаючи переслане з /top)
 bot.on('message', (msg) => {
   const userId = msg.from.id;
   const chatId = msg.chat.id;
@@ -97,7 +96,6 @@ bot.on('message', (msg) => {
 
   const state = waitingFor[userId];
 
-  // Очікуємо дату
   if (state.step === 'awaiting_date') {
     const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
     if (!dateRegex.test(msg.text)) {
@@ -108,28 +106,32 @@ bot.on('message', (msg) => {
     return bot.sendMessage(chatId, '📨 Тепер перешли повідомлення з /top (від бота @yosoyass_bot)');
   }
 
-  // Очікуємо переслане повідомлення
   if (state.step === 'awaiting_message') {
     const rawText = msg.text || msg.caption || '';
+    console.log('📩 Отримано повідомлення з текстом:', rawText.slice(0, 80));
 
     if (!rawText || rawText.length < 20) {
       return bot.sendMessage(chatId, '❌ Повідомлення виглядає порожнім або непридатним. Спробуй переслати ще раз.');
     }
 
-    const dataToSave = {
-      date: state.date,
-      raw: rawText
-    };
+    try {
+      const dataToSave = {
+        date: state.date,
+        raw: rawText
+      };
 
-    fs.writeFileSync(path.join(__dirname, 'data', 'origin.json'), JSON.stringify(dataToSave, null, 2));
+      fs.writeFileSync(path.join(__dirname, 'data', 'origin.json'), JSON.stringify(dataToSave, null, 2));
+      bot.sendMessage(chatId, '✅ Початкові дані збережено в origin.json');
 
-        const { processInitial } = require('./modules/initialProcessor');
-    processInitial();
+      const { processInitial } = require('./modules/initialProcessor');
+      processInitial();
+
+      bot.sendMessage(chatId, '📊 Дані оброблено: поінти збережено, токени розраховано.');
+    } catch (err) {
+      console.error('❌ Помилка при обробці processInitial:', err);
+      bot.sendMessage(chatId, '❌ Помилка при обробці. Перевір логи.');
+    }
 
     delete waitingFor[userId];
-
-    bot.sendMessage(chatId, '✅ Початкові дані збережено в origin.json');
-    bot.sendMessage(chatId, '📊 Дані оброблено: поінти збережено, токени розраховано.');
-
   }
 });
