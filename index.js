@@ -19,17 +19,13 @@ bot.onText(/\/clear/, (msg) => {
     return bot.sendMessage(msg.chat.id, '⛔️ У вас немає прав для цієї дії.');
   }
 
-      const originPath = path.join(__dirname, 'data', 'origin.json');
-    fs.writeFileSync(originPath, JSON.stringify(dataToSave, null, 2));
+  const dataPath = path.join(__dirname, 'data');
 
-    // 🔥 одразу запускаємо обробку
-    const { processInitial } = require('./modules/initialProcessor');
-    processInitial();
+  fs.writeFileSync(path.join(dataPath, 'history.json'), '{}');
+  fs.writeFileSync(path.join(dataPath, 'balance.json'), '{}');
+  fs.writeFileSync(path.join(dataPath, 'origin.json'), '{}');
 
-    delete waitingFor[userId];
-
-    return bot.sendMessage(chatId, '✅ Початкові дані збережено та оброблено');
-
+  bot.sendMessage(msg.chat.id, '✅ Всі історії та початкові дані успішно очищені.');
 });
 
 // ✅ /initial (введення початкової дати та повідомлення)
