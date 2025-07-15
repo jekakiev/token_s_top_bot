@@ -3,22 +3,18 @@ const path = require('path');
 
 module.exports = (bot) => {
   bot.command('show_points', async (ctx) => {
-    const historyDir = path.join(__dirname, '..', 'history');
-    const files = await fs.readdir(historyDir);
-    const pointsFiles = files.filter(file => file.startsWith('points_'));
-
-    if (pointsFiles.length === 0) {
+    const pointsPath = path.join(__dirname, '..', 'history', 'points.json');
+    if (!await fs.pathExists(pointsPath)) {
       return ctx.reply('История поинтов пуста.');
     }
 
+    const points = await fs.readJson(pointsPath);
     let response = '📊 История поинтов:\n';
-    for (const file of pointsFiles) {
-      const filePath = path.join(historyDir, file);
-      const data = await fs.readJson(filePath);
-      const date = file.replace('points_', '').replace('.json', '');
-      response += `\nДата: ${date}\n`;
-      for (const [username, points] of Object.entries(data)) {
-        response += `${username}: ${points} S-points\n`;
+    
+    for (const [nick, records] of Object.entries(points)) {
+      response += `\n${nick}:\n`;
+      for (const { date, sPoints } of records) {
+        response += `  ${date}: ${sPoints} S-points\n`;
       }
     }
 
