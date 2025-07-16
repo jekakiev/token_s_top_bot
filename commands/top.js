@@ -1,3 +1,6 @@
+const { ADMIN_ID } = require('../config');
+
+
 module.exports = (bot) => {
   console.log('🔁 Команда /top готова');
 
