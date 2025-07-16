@@ -1,56 +1,36 @@
-const Telegraf = require('telegraf');
-const cron = require('node-cron');
-
 module.exports = (bot) => {
-  console.log('Initializing /top command');
+  console.log('🔁 Команда /top готова');
 
-  // Функція для запиту /top і відправки в канал з таймаутом
-  async function fetchAndForwardTop() {
-    try {
-      console.log('Sending /top to @yosoyass_bot');
-      const response = await bot.telegram.sendMessage('@yosoyass_bot', '/top');
-      const messageId = response.message_id;
-
-      // Таймаут для уникнення зависання
-      return Promise.race([
-        new Promise((resolve) => {
-          bot.once('message', async (ctx) => {
-            console.log('Received message from @yosoyass_bot');
-            if (ctx.message?.forward_from?.username === 'yosoyass_bot' && ctx.message?.reply_to_message?.message_id === messageId) {
-              const message = ctx.message.text;
-              await bot.telegram.sendMessage('@token_s_top', message, {
-                parse_mode: 'Markdown',
-                disable_web_page_preview: true
-              });
-              await ctx.reply('Топ успешно отправлен в @token_s_top.');
-              resolve();
-            }
-          });
-        }),
-        new Promise((_, reject) => setTimeout(() => reject(new Error('Таймаут ожидания ответа от @yosoyass_bot')), 30000)) // 30 секунд
-      ]);
-    } catch (error) {
-      console.error('Ошибка при запросе /top:', error);
-      if (error.message === 'Таймаут ожидания ответа от @yosoyass_bot') {
-        console.log('Таймаут истек, запрос не обработан.');
-      }
-    }
-  }
-
-  // Ручна команда /top
+  // /top — инструкция для пользователя
   bot.command('top', async (ctx) => {
-    console.log('Received /top command from', ctx.from.id);
-    if (ctx.from.id !== ADMIN_ID) {
-      await ctx.reply('⛔️ У вас нет прав для этой команды.');
-      return;
-    }
-    await fetchAndForwardTop();
-    await ctx.reply('Запрос /top отправлен @yosoyass_bot. Ожидайте обновления...');
+    await ctx.reply(
+      '📥 Чтобы получить топ холдеров:\n\n1. Открой @yosoyass_bot в Telegram\n2. Отправь ему команду /top\n3. Перешли его ответ сюда в этот чат\n\n✅ Я автоматически обработаю сообщение и отправлю данные в канал.'
+    );
   });
 
-  // Автоматичний запуск щоденно о 03:00 EEST (00:00 UTC)
-  cron.schedule('0 0 * * *', async () => {
-    console.log('Автоматический запрос /top запущен');
-    await fetchAndForwardTop().catch((error) => console.error('Ошибка в cron:', error));
+  // Обработка пересланного сообщения
+  bot.on('message', async (ctx) => {
+    try {
+      const forwarded = ctx.message?.forward_from?.username === 'yosoyass_bot';
+      if (!forwarded) return;
+
+      const text = ctx.message.text;
+
+      if (!text) {
+        await ctx.reply('⚠️ Сообщение от @yosoyass_bot не содержит текста.');
+        return;
+      }
+
+      // Отправка в канал
+      await bot.telegram.sendMessage('@token_s_top', text, {
+        parse_mode: 'Markdown',
+        disable_web_page_preview: true
+      });
+
+      await ctx.reply('✅ Данные от @yosoyass_bot обработаны и отправлены в канал @token_s_top');
+    } catch (err) {
+      console.error('❌ Ошибка при обработке сообщения:', err);
+      await ctx.reply('❌ Произошла ошибка при обработке. Попробуй ещё раз.');
+    }
   });
 };
