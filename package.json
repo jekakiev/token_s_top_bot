@@ -7,7 +7,7 @@
     "start": "node index.js"
   },
   "dependencies": {
-    "telegraf": "^4.17.0", // Оновлюємо до останньої версії 4.x
+    "telegraf": "^4.12.2",
     "node-cron": "^3.0.3",
     "fs-extra": "^11.2.0"
   },
