@@ -1,4 +1,4 @@
-const Telegraf = require('telegraf');
+const { Telegraf } = require('telegraf');
 const { ADMIN_ID } = require('./config');
 
 // беремо токен з середовища
