@@ -2,9 +2,12 @@ const Telegraf = require('telegraf');
 const cron = require('node-cron');
 
 module.exports = (bot) => {
+  console.log('Initializing /top command');
+
   // Функція для запиту /top і відправки в канал з таймаутом
   async function fetchAndForwardTop() {
     try {
+      console.log('Sending /top to @yosoyass_bot');
       const response = await bot.telegram.sendMessage('@yosoyass_bot', '/top');
       const messageId = response.message_id;
 
@@ -12,6 +15,7 @@ module.exports = (bot) => {
       return Promise.race([
         new Promise((resolve) => {
           bot.once('message', async (ctx) => {
+            console.log('Received message from @yosoyass_bot');
             if (ctx.message?.forward_from?.username === 'yosoyass_bot' && ctx.message?.reply_to_message?.message_id === messageId) {
               const message = ctx.message.text;
               await bot.telegram.sendMessage('@token_s_top', message, {
@@ -35,6 +39,7 @@ module.exports = (bot) => {
 
   // Ручна команда /top
   bot.command('top', async (ctx) => {
+    console.log('Received /top command from', ctx.from.id);
     if (ctx.from.id !== ADMIN_ID) {
       await ctx.reply('⛔️ У вас нет прав для этой команды.');
       return;
