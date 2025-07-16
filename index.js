@@ -1,19 +1,21 @@
-const { Telegraf } = require('telegraf');
-const { ADMIN_ID, BOT_TOKEN } = require('./config');
+const Telegraf = require('telegraf');
+const { ADMIN_ID } = require('./config');
+
+// беремо токен з середовища
+const BOT_TOKEN = process.env.BOT_TOKEN;
+
+if (!BOT_TOKEN) {
+  throw new Error('❌ BOT_TOKEN is not set in environment variables');
+}
 
 const bot = new Telegraf(BOT_TOKEN);
 
-// Ініціалізація команд (тимчасово відключимо непотрібні)
+// Ініціалізація команд
 require('./commands/top')(bot);
 
-// require('./commands/initial')(bot);
-// require('./commands/clear')(bot);
-// require('./commands/show_points')(bot);
-// require('./commands/show_tokens')(bot);
-
-bot.launch()
-  .then(() => console.log('Bot started...'))
-  .catch((err) => console.error('Error starting bot:', err));
+// Запуск бота
+bot.launch();
+console.log('✅ Bot started...');
 
 process.once('SIGINT', () => bot.stop('SIGINT'));
 process.once('SIGTERM', () => bot.stop('SIGTERM'));
