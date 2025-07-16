@@ -40,9 +40,9 @@ module.exports = (bot) => {
     await ctx.reply(`🔄 Надсилаю повний топ (${sorted.length} гравців) за ${today}...`);
 
     for (const part of chunks) {
-      const message = `📊 Топ на ${today}\n\n${part.join('\n')}`;
+      const message = `📊 Топ на ${today}\n\n> ${part.join('\n> ')}`;
       await bot.telegram.sendMessage('@token_s_top', message, {
-        parse_mode: 'HTML', // не Markdown, щоб не плуталось
+        parse_mode: 'Markdown',
         disable_web_page_preview: true,
       });
     }
