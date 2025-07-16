@@ -1,3 +1,4 @@
+const { Markup } = require('telegraf');
 const fs = require('fs-extra');
 const path = require('path');
 const dayjs = require('dayjs');
@@ -35,13 +36,26 @@ module.exports = (bot) => {
       return `${i + 1}. ${user.nick} ${user.sPoints}`;
     });
 
-    const message = `📊 Топ на ${today}\n\n<details><summary>Натисніть для розгортання</summary>\n> ${lines.join('\n> ')}\n</details>`;
+    const message = `📊 Топ на ${today}\n\n${lines.slice(0, 10).join('\n')}`;
 
-    await bot.telegram.sendMessage('@token_s_top', message, {
-      parse_mode: 'HTML',
-      disable_web_page_preview: true,
+    // Створення кнопки "Розгорнути"
+    const keyboard = Markup.inlineKeyboard([
+      Markup.button.callback('Розгорнути весь список', 'show_full_list')
+    ]);
+
+    // Відправка повідомлення з кнопкою
+    const sentMessage = await ctx.reply(message, {
+      reply_markup: keyboard,
+      parse_mode: 'Markdown',
     });
 
-    await ctx.reply(`✅ Відправлено повідомлення в канал @token_s_top`);
+    bot.action('show_full_list', async (ctx) => {
+      // Відправлення розгорнутого повідомлення
+      const fullMessage = `📊 Топ на ${today}\n\n${lines.join('\n')}`;
+      await ctx.editMessageText(fullMessage, {
+        parse_mode: 'Markdown',
+        reply_markup: { inline_keyboard: [] }, // видаляємо кнопку після натискання
+      });
+    });
   });
 };
