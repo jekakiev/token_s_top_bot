@@ -2,23 +2,23 @@ const Telegraf = require('telegraf');
 const cron = require('node-cron');
 
 module.exports = (bot) => {
-  // Функція для запиту /top і відправки в канал
+  // Глобальний слухач для обробки відповідей від @yosoyass_bot
+  bot.on('message', async (ctx) => {
+    if (ctx.message?.forward_from?.username === 'yosoyass_bot') {
+      const message = ctx.message.text;
+      await bot.telegram.sendMessage('@token_s_top', message, {
+        parse_mode: 'Markdown',
+        disable_web_page_preview: true
+      });
+      await ctx.reply('Топ успешно отправлен в @token_s_top.');
+    }
+  });
+
+  // Функція для запиту /top
   async function fetchAndForwardTop() {
     try {
-      const response = await bot.telegram.sendMessage('@yosoyass_bot', '/top');
-      const messageId = response.message_id;
-
-      // Чекаємо відповіді і пересилаємо в канал
-      bot.on('message', async (ctx) => {
-        if (ctx.message?.forward_from?.username === 'yosoyass_bot' && ctx.message?.reply_to_message?.message_id === messageId) {
-          const message = ctx.message.text;
-          await bot.telegram.sendMessage('@token_s_top', message, {
-            parse_mode: 'Markdown',
-            disable_web_page_preview: true
-          });
-          await ctx.reply('Топ успешно отправлен в @token_s_top.');
-        }
-      });
+      await bot.telegram.sendMessage('@yosoyass_bot', '/top');
+      console.log('Запрос /top отправлен @yosoyass_bot');
     } catch (error) {
       console.error('Ошибка при запросе /top:', error);
     }
