@@ -1,17 +1,17 @@
-const { Telegraf } = require('telegraf');
-const fs = require('fs-extra');
-const path = require('path');
+const Telegraf = require('telegraf');
+const { ADMIN_ID, BOT_TOKEN } = require('./config');
 
-const bot = new Telegraf(process.env.BOT_TOKEN);
+const bot = new Telegraf(BOT_TOKEN);
 
-// Підключення команд
-const commandFiles = fs.readdirSync(path.join(__dirname, 'commands')).filter(file => file.endsWith('.js'));
-for (const file of commandFiles) {
-  const command = require(`./commands/${file}`);
-  command(bot);
-}
+// Ініціалізація команд (тимчасово відключимо непотрібні)
+require('./commands/top')(bot);
+
+// require('./commands/initial')(bot);
+// require('./commands/clear')(bot);
+// require('./commands/show_points')(bot);
+// require('./commands/show_tokens')(bot);
 
 bot.launch();
-
+console.log('Bot started...');
 process.once('SIGINT', () => bot.stop('SIGINT'));
 process.once('SIGTERM', () => bot.stop('SIGTERM'));
