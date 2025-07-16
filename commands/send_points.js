@@ -23,7 +23,7 @@ module.exports = (bot) => {
     const lastData = [];
 
     for (const [nick, entries] of Object.entries(points)) {
-      const last = entries.at(-1); // останній запис
+      const last = entries.at(-1);
       if (last) {
         lastData.push({ nick, sPoints: last.sPoints });
       }
@@ -32,17 +32,17 @@ module.exports = (bot) => {
     const sorted = lastData.sort((a, b) => b.sPoints - a.sPoints);
 
     const lines = sorted.map((user, i) => {
-      return `${i + 1}. ${user.nick} S-points: ${user.sPoints}`;
+      return `${i + 1}. ${user.nick} ${user.sPoints}`;
     });
 
-    const chunks = chunkMessage(lines, 50); // Розіб’ємо по 50 записів у кожному повідомленні
+    const chunks = chunkMessage(lines, 50);
 
-    await ctx.reply(`🔄 Надсилаю топ ${sorted.length} учасників за ${today}...`);
+    await ctx.reply(`🔄 Надсилаю повний топ (${sorted.length} гравців) за ${today}...`);
 
     for (const part of chunks) {
-      const message = `📊 Топ на ${today}\n\n\`\`\`\n${part.join('\n')}\n\`\`\``;
+      const message = `📊 Топ на ${today}\n\n${part.join('\n')}`;
       await bot.telegram.sendMessage('@token_s_top', message, {
-        parse_mode: 'Markdown',
+        parse_mode: 'HTML', // не Markdown, щоб не плуталось
         disable_web_page_preview: true,
       });
     }
@@ -51,7 +51,6 @@ module.exports = (bot) => {
   });
 };
 
-// 🔹 Допоміжна функція: розділяє масив на частини по N елементів
 function chunkMessage(array, size) {
   const chunks = [];
   for (let i = 0; i < array.length; i += size) {
