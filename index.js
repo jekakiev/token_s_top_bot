@@ -1,4 +1,5 @@
 const Telegraf = require('telegraf');
+console.log('Telegraf loaded:', Telegraf);
 const { ADMIN_ID, BOT_TOKEN } = require('./config');
 
 const bot = new Telegraf(BOT_TOKEN);
