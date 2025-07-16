@@ -23,3 +23,7 @@ processes = []
   [[services.ports]]
     handlers = ["tls", "http"]
     port = 443
+
+[mounts]
+  source = "history"  # Ім'я об'єму, який ви створили
+  destination = "/data"  # Куди монтується об'єм

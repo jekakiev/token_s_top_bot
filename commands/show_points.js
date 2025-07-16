@@ -3,7 +3,7 @@ const path = require('path');
 
 module.exports = (bot) => {
   bot.command('show_points', async (ctx) => {
-    const pointsPath = path.join(__dirname, '..', 'history', 'points.json');
+    const pointsPath = path.join('/data', 'history', 'points.json');
     if (!await fs.pathExists(pointsPath)) {
       return ctx.reply('История поинтов пуста.');
     }

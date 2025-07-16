@@ -10,7 +10,7 @@ module.exports = (bot) => {
       return;
     }
 
-    const historyDir = path.join(__dirname, '..', 'history');
+    const historyDir = path.join('/data', 'history'); // Змінено на /data/history
     if (!await fs.pathExists(historyDir)) {
       await ctx.reply('📂 Папка истории не существует.');
       return;

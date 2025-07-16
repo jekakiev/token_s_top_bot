@@ -3,7 +3,7 @@ const path = require('path');
 
 module.exports = (bot) => {
   bot.command('show_tokens', async (ctx) => {
-    const tokensPath = path.join(__dirname, '..', 'history', 'tokens.json');
+    const tokensPath = path.join('/data', 'history', 'tokens.json');
     if (!await fs.pathExists(tokensPath)) {
       return ctx.reply('История токенов пуста.');
     }

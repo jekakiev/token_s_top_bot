@@ -35,7 +35,7 @@ module.exports = (bot) => {
       }
 
       const date = ctx.scene.state.date;
-      const historyDir = path.join(__dirname, '..', 'history');
+      const historyDir = path.join('/data', 'history'); // Змінено на /data/history
       await fs.ensureDir(historyDir); // Створюємо папку history, якщо її немає
 
       const fileName = `init_pure_${date}.json`;
