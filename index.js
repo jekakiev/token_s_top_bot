@@ -1,5 +1,4 @@
-const Telegraf = require('telegraf');
-console.log('Telegraf loaded:', Telegraf);
+const { Telegraf } = require('telegraf');
 const { ADMIN_ID, BOT_TOKEN } = require('./config');
 
 const bot = new Telegraf(BOT_TOKEN);
@@ -12,7 +11,9 @@ require('./commands/top')(bot);
 // require('./commands/show_points')(bot);
 // require('./commands/show_tokens')(bot);
 
-bot.launch();
-console.log('Bot started...');
+bot.launch()
+  .then(() => console.log('Bot started...'))
+  .catch((err) => console.error('Error starting bot:', err));
+
 process.once('SIGINT', () => bot.stop('SIGINT'));
 process.once('SIGTERM', () => bot.stop('SIGTERM'));
