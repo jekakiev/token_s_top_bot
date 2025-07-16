@@ -23,7 +23,7 @@ module.exports = (bot) => {
     const lastData = [];
 
     for (const [nick, entries] of Object.entries(points)) {
-      const last = entries.at(-1); // беремо останній запис
+      const last = entries.at(-1);
       if (last) {
         lastData.push({ nick, sPoints: last.sPoints });
       }
@@ -31,21 +31,34 @@ module.exports = (bot) => {
 
     const sorted = lastData.sort((a, b) => b.sPoints - a.sPoints);
 
-    // Форматування повідомлення з використанням blockquote
+    // Форматування списку з blockquote
     const lines = sorted.map((user, i) => {
       return `${i + 1}. ${user.nick} ${user.sPoints}`;
     });
 
-    const message = `📊 Топ на ${today}\n\n${format`Format text as ${blockquote`${lines.join('\n')}`}`}`;
+    const chunks = chunkMessage(lines, 50);
 
-    await bot.telegram.sendMessage('@token_s_top', message, {
-      parse_mode: 'Markdown',
-      disable_web_page_preview: true,
-    });
+    await ctx.reply(`🔄 Надсилаю повний топ (${sorted.length} гравців) за ${today}...`);
 
-    await ctx.reply(`✅ Повідомлення відправлено в канал @token_s_top`);
+    for (const part of chunks) {
+      const message = `📊 Топ на ${today}\n\n${format`Format text as ${blockquote`${part.join('\n')}`}`}`;
+      await bot.telegram.sendMessage('@token_s_top', message, {
+        parse_mode: 'Markdown',
+        disable_web_page_preview: true,
+      });
+    }
+
+    await ctx.reply(`✅ Відправлено ${chunks.length} повідомлень у @token_s_top`);
   });
 };
+
+function chunkMessage(array, size) {
+  const chunks = [];
+  for (let i = 0; i < array.length; i += size) {
+    chunks.push(array.slice(i, i + size));
+  }
+  return chunks;
+}
 
 // Форматування з blockquote
 function format(strings, ...values) {
