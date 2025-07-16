@@ -1,7 +1,8 @@
 const { Telegraf } = require('telegraf');
 const { ADMIN_ID } = require('./config');
+const fs = require('fs');               // 🧩 Додано
+const path = require('path');           // 🧩 Додано
 
-// беремо токен з середовища
 const BOT_TOKEN = process.env.BOT_TOKEN;
 
 if (!BOT_TOKEN) {
@@ -10,10 +11,16 @@ if (!BOT_TOKEN) {
 
 const bot = new Telegraf(BOT_TOKEN);
 
-// Ініціалізація команд
-require('./commands/top')(bot);
+// 🔁 Динамічне підключення всіх команд з папки commands
+const commandFiles = fs
+  .readdirSync(path.join(__dirname, 'commands'))
+  .filter(file => file.endsWith('.js'));
 
-// Запуск бота
+for (const file of commandFiles) {
+  const command = require(`./commands/${file}`);
+  command(bot);
+}
+
 bot.launch();
 console.log('✅ Bot started...');
 
