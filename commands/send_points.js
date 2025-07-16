@@ -1,4 +1,3 @@
-const { Markup } = require('telegraf');
 const fs = require('fs-extra');
 const path = require('path');
 const dayjs = require('dayjs');
@@ -24,7 +23,7 @@ module.exports = (bot) => {
     const lastData = [];
 
     for (const [nick, entries] of Object.entries(points)) {
-      const last = entries.at(-1);
+      const last = entries.at(-1); // беремо останній запис
       if (last) {
         lastData.push({ nick, sPoints: last.sPoints });
       }
@@ -32,30 +31,23 @@ module.exports = (bot) => {
 
     const sorted = lastData.sort((a, b) => b.sPoints - a.sPoints);
 
+    // Форматування повідомлення з використанням blockquote
     const lines = sorted.map((user, i) => {
       return `${i + 1}. ${user.nick} ${user.sPoints}`;
     });
 
-    const message = `📊 Топ на ${today}\n\n${lines.slice(0, 10).join('\n')}`;
+    const message = `📊 Топ на ${today}\n\n${format`Format text as ${blockquote`${lines.join('\n')}`}`}`;
 
-    // Створення кнопки "Розгорнути"
-    const keyboard = Markup.inlineKeyboard([
-      Markup.button.callback('Розгорнути весь список', 'show_full_list')
-    ]);
-
-    // Відправка повідомлення з кнопкою
-    const sentMessage = await ctx.reply(message, {
-      reply_markup: keyboard,
+    await bot.telegram.sendMessage('@token_s_top', message, {
       parse_mode: 'Markdown',
+      disable_web_page_preview: true,
     });
 
-    bot.action('show_full_list', async (ctx) => {
-      // Відправлення розгорнутого повідомлення
-      const fullMessage = `📊 Топ на ${today}\n\n${lines.join('\n')}`;
-      await ctx.editMessageText(fullMessage, {
-        parse_mode: 'Markdown',
-        reply_markup: { inline_keyboard: [] }, // видаляємо кнопку після натискання
-      });
-    });
+    await ctx.reply(`✅ Повідомлення відправлено в канал @token_s_top`);
   });
 };
+
+// Форматування з blockquote
+function format(strings, ...values) {
+  return strings.reduce((result, str, i) => result + str + (values[i] ? values[i] : ''), '');
+}
